@@ -1,2 +1,2 @@
-# curioh
+# AWS-curioh
 Simple Amazon AWS requests

@@ -1,14 +1,14 @@
-import curioh
+import aws_curioh
 
 from setuptools import find_packages, setup
 
-version = curioh.__version__
+version = aws_curioh.__version__
 
 setup(
-    name='Curioh',
+    name='aws-curioh',
     version=version,
     description=('Simple Amazon AWS requests.'),
-    url='https://github.com/w2srobinho/curioh',
+    url='https://github.com/w2srobinho/aws-curioh',
     author='Willian de Souza',
     author_email='willianstosouza@gmail.com',
     license='MIT',
