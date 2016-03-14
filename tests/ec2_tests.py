@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from aws.ec2 import Client
+from curioh.ec2 import Client
 
 DESCRIBE_INSTANCES = {
     'Reservations': [
