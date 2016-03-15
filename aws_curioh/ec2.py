@@ -1,4 +1,18 @@
+import boto3
 import time
+
+
+class EC2:
+    def __init__(self, access_key_id, secret_access_key, region_name='sa-east-1', **kwargs):
+        self._client = boto3.client(
+            'ec2',
+             region_name=region_name,
+             aws_access_key_id=access_key_id,
+             aws_secret_access_key=secret_access_key)
+
+
+    def client(self):
+        return self._client
 
 
 class Client:
