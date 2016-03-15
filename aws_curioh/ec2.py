@@ -10,7 +10,6 @@ class EC2:
              aws_access_key_id=access_key_id,
              aws_secret_access_key=secret_access_key)
 
-
     def client(self):
         return self._client
 
@@ -39,6 +38,8 @@ class Client:
         return status
 
     def _instance_by_id(self, instance_id):
+        if not self.response:
+            self.response = self.ec2_client.describe_instances()
         reservations = self.response['Reservations']
         for it in reservations:
             instance = it['Instances'][0]
@@ -47,14 +48,24 @@ class Client:
         return None
 
     def start_instance(self, instance_id):
-        response = self.ec2_client.start_instances(InstanceIds=[instance_id])
-        self._wait_to_running(instance_id, response)
+        instance = self._instance_by_id(instance_id)
+        if instance['State']['Name'] == 'running':
+            return
+        if instance['State']['Name'] == 'stopping':
+            self._wait_to('stopped', instance_id)
 
-    def _wait_to_running(self, instance_id, response):
-        current_status = response['StartingInstances'][0]['CurrentState']['Name']
-        while current_status != 'running':
+        self.ec2_client.start_instances(InstanceIds=[instance_id])
+        self._wait_to('running', instance_id)
+
+    def _wait_to(self, status, instance_id):
+        current_status = self.instance_status(instance_id)
+        while current_status != status:
             time.sleep(2)
             current_status = self.instance_status(instance_id)
+
+    def reboot_instance(self, instance_id):
+        self.ec2_client.reboot_instances(
+            InstanceIds=[instance_id])
 
     def stop_instance(self, instance_id):
         if self.instance_status(instance_id) == 'stopped' or \
@@ -73,6 +84,7 @@ class Client:
     def _running(self, tag_name=None, **kwargs):
         response = self.ec2_client.run_instances(**kwargs)
         instance_id = response['Instances'][0]['InstanceId']
+        self._wait_to_running(instance_id)
         if tag_name:
             self.ec2_client.create_tags(
                 Resources=[instance_id],
