@@ -4,9 +4,11 @@ import time
 class Client:
     def __init__(self, ec2_client):
         self.ec2_client = ec2_client
+        self.response = None
 
     def instance_ids(self, tag_name=''):
-        reservations = self.ec2_client.describe_instances()['Reservations']
+        self.response = self.ec2_client.describe_instances()
+        reservations = self.response['Reservations']
         if not tag_name:
             return [it['Instances'][0]['InstanceId'] for it in reservations]
 
@@ -17,18 +19,26 @@ class Client:
             it['Instances'][0]['Tags'][0].values()]
 
     def instance_status(self, instance_id):
-        reservations = self.ec2_client.describe_instances()['Reservations']
-        status = ''
+        self.response = self.ec2_client.describe_instances()
+        instance = self._instance_by_id(instance_id)
+        status = instance['State']['Name']
+        return status
+
+    def _instance_by_id(self, instance_id):
+        reservations = self.response['Reservations']
         for it in reservations:
             instance = it['Instances'][0]
             if instance_id == instance['InstanceId']:
-                status = instance['State']['Name']
-        return status
+                return instance
+        return None
 
     def start_instance(self, instance_id):
         response = self.ec2_client.start_instances(InstanceIds=[instance_id])
+        self._wait_to_running(instance_id, response)
+
+    def _wait_to_running(self, instance_id, response):
         current_status = response['StartingInstances'][0]['CurrentState']['Name']
-        while current_status == 'pending':
+        while current_status != 'running':
             time.sleep(2)
             current_status = self.instance_status(instance_id)
 
@@ -38,6 +48,7 @@ class Client:
             return
 
         self.ec2_client.stop_instances(InstanceIds=[instance_id])
+        self.response = self.ec2_client.describe_instances()
 
     def terminate_instance(self, instance_id):
         if self.instance_status(instance_id) == 'terminated':
@@ -56,3 +67,9 @@ class Client:
 
     def run_instance(self, **kwargs):
         return self._running(**kwargs)
+
+    def instance_public_ip(self, instance_id):
+        instance = self._instance_by_id(instance_id)
+        if self.instance_status(instance_id) == 'running':
+            return instance['PublicIpAddress']
+        return ''

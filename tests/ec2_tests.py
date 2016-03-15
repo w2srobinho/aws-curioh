@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from curioh.ec2 import Client
+from aws_curioh.ec2 import Client
 
 DESCRIBE_INSTANCES = {
     'Reservations': [
@@ -143,3 +143,12 @@ class ClientTests(unittest.TestCase):
 
         self.client_mock.create_tags.assert_not_called()
         self.assertEqual(returned_id, expected_id)
+
+    def test_instance_public_ip(self):
+        client = Client(self.client_mock)
+        public_ip_expected = '1.2.3.4'
+        DESCRIBE_INSTANCES['Reservations'][0]['Instances'][0]['PublicIpAddress'] = public_ip_expected
+        client.instance_status('i-f800157b')
+        public_ip_returned = client.instance_public_ip('i-f800157b')
+
+        self.assertEqual(public_ip_returned, public_ip_expected)
