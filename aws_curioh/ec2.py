@@ -49,15 +49,13 @@ class Client:
 
     def start_instance(self, instance_id):
         instance = self._instance_by_id(instance_id)
-        if instance['State']['Name'] == 'running':
+        if instance['State']['Name'] in ['pending', 'running']:
             return
         if instance['State']['Name'] == 'stopping':
-            self._wait_to('stopped', instance_id)
-
+            self.wait_to('stopped', instance_id)
         self.ec2_client.start_instances(InstanceIds=[instance_id])
-        self._wait_to('running', instance_id)
 
-    def _wait_to(self, status, instance_id):
+    def wait_to(self, status, instance_id):
         current_status = self.instance_status(instance_id)
         while current_status != status:
             time.sleep(2)
@@ -69,22 +67,19 @@ class Client:
 
     def stop_instance(self, instance_id):
         if self.instance_status(instance_id) == 'stopped' or \
-                        self.instance_status(instance_id) == 'stopping':
+           self.instance_status(instance_id) == 'stopping':
             return
-
         self.ec2_client.stop_instances(InstanceIds=[instance_id])
         self.response = self.ec2_client.describe_instances()
 
     def terminate_instance(self, instance_id):
         if self.instance_status(instance_id) == 'terminated':
             return
-
         self.ec2_client.terminate_instances(InstanceIds=[instance_id])
 
     def _running(self, tag_name=None, **kwargs):
         response = self.ec2_client.run_instances(**kwargs)
         instance_id = response['Instances'][0]['InstanceId']
-        self._wait_to_running(instance_id)
         if tag_name:
             self.ec2_client.create_tags(
                 Resources=[instance_id],
